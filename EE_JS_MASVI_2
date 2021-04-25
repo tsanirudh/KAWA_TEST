@@ -1,6 +1,9 @@
+
+//import packages
 var palettes = require('users/gena/packages:colorbrewer').Palettes;
 var utils = require('users/gena/packages:utils')
 var text = require('users/gena/packages:text')
+//Coordinates and geometry for areas A, B and C
 var P_A =   ee.Geometry.Polygon(
         [[[75.45157492160797, 30.634404129904425],
           [75.4524278640747,  30.63372099804389],
@@ -15,10 +18,16 @@ var P_B =   ee.Geometry.Polygon(
           [85.85622847080231, 26.09425078918021],]], null, false);
 
 
+var P_C =   ee.Geometry.Polygon(
+        [[[78.66571158170699, 17.66869116558751],
+          [78.6662346124649,  17.6686911655875], 
+          [78.6662346124649,  17.66929686130703], 
+          [78.66571158170699, 17.66929686130703], 
+          [78.66571158170699, 17.66869116558751],]], null, false);
 
 
 
-
+//Cloud masking function, using the pixel_qa band.
 
 function pix (image) {
   var cloudShadowBitMask = 1 << 3;
@@ -31,6 +40,8 @@ function pix (image) {
 
 }
 
+// MSAVI -2 function, wich also converts values to float
+
 function SAVI (image) {
   return image.select().addBands(image.expression(
                         '(2 * NIR + 1 - sqrt(pow((2 * NIR + 1), 2) - 8 * (NIR - RED)) ) / 2', {
@@ -40,32 +51,35 @@ function SAVI (image) {
                     }).float()).rename('SAVI')};
 
 
-
+//Image collections with cloud masking function. col collections
+. 
   var col_A = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
 .filterBounds(P_A)
-.filterDate('2020-01-01','2020-08-01').sort('CLOUD_COVER',false)
+.filterDate('2020-01-01','2020-07-01').sort('CLOUD_COVER',false)
 .map(pix);
 
   var col_B = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
 .filterBounds(P_B)
-.filterDate('2020-01-01','2020-08-01').sort('CLOUD_COVER',false)
+.filterDate('2020-01-01','2020-07-01').sort('CLOUD_COVER',false)
 .map(pix);
 
 
   var col_C = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
 .filterBounds(P_C)
-.filterDate('2020-01-01','2020-08-01').sort('CLOUD_COVER',false)
+.filterDate('2020-01-01','2020-07-01').sort('CLOUD_COVER',false)
 .map(pix);
 
 
 
 
+//Applied MSAVI-2 funtion to the image collections 
 
 var A_S = col_A.map(SAVI);
 var B_S = col_B.map(SAVI);
 var C_S = col_C.map(SAVI);
   
 
+//Charts 
 
 var A = ui.Chart.image.series(A_S, P_A, ee.Reducer.mean(), 500) .setChartType('BarChart');
   A.setOptions({
@@ -124,14 +138,14 @@ var C = ui.Chart.image.series(C_S, P_C, ee.Reducer.mean(), 500) .setChartType('B
 
 
 
-
+//Add charts to the map
 
 Map.add(A)
 Map.add(B)
 Map.add(C)
 
-
-  Map.setCenter(75.4524278640747,  30.63372099804389,10);
+//print image collections for verification.
+Map.setCenter(75.4524278640747,  30.63372099804389,10);
   print (A_S)
   print (B_S)
   print (C_S)
