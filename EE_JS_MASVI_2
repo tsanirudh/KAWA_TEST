@@ -1,0 +1,138 @@
+var palettes = require('users/gena/packages:colorbrewer').Palettes;
+var utils = require('users/gena/packages:utils')
+var text = require('users/gena/packages:text')
+var P_A =   ee.Geometry.Polygon(
+        [[[75.45157492160797, 30.634404129904425],
+          [75.4524278640747,  30.63372099804389],
+          [75.45236885547638, 30.634399514164798],
+          [75.45157492160797, 30.634404129904425],]], null, false);
+
+
+var P_B =   ee.Geometry.Polygon(
+        [[[85.85590660572052, 26.093581136401006], 
+          [85.85663080215454, 26.09337879451938 ], 
+          [85.85686147212981, 26.094009907326967], 
+          [85.85622847080231, 26.09425078918021],]], null, false);
+
+
+
+
+
+
+
+function pix (image) {
+  var cloudShadowBitMask = 1 << 3;
+  var cloudsBitMask = 1 << 5;
+  var qa = image.select('pixel_qa');
+
+  var mask = qa.bitwiseAnd(cloudShadowBitMask).eq(0)
+      .and(qa.bitwiseAnd(cloudsBitMask).eq(0));
+  return image.updateMask(mask);
+
+}
+
+function SAVI (image) {
+  return image.select().addBands(image.expression(
+                        '(2 * NIR + 1 - sqrt(pow((2 * NIR + 1), 2) - 8 * (NIR - RED)) ) / 2', {
+                        'NIR': image.select('B5'),
+                        'RED': image.select('B4'),
+                        'L': 0.5
+                    }).float()).rename('SAVI')};
+
+
+
+  var col_A = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
+.filterBounds(P_A)
+.filterDate('2020-01-01','2020-08-01').sort('CLOUD_COVER',false)
+.map(pix);
+
+  var col_B = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
+.filterBounds(P_B)
+.filterDate('2020-01-01','2020-08-01').sort('CLOUD_COVER',false)
+.map(pix);
+
+
+  var col_C = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
+.filterBounds(P_C)
+.filterDate('2020-01-01','2020-08-01').sort('CLOUD_COVER',false)
+.map(pix);
+
+
+
+
+
+var A_S = col_A.map(SAVI);
+var B_S = col_B.map(SAVI);
+var C_S = col_C.map(SAVI);
+  
+
+
+var A = ui.Chart.image.series(A_S, P_A, ee.Reducer.mean(), 500) .setChartType('BarChart');
+  A.setOptions({
+    title: 'SAVI Area - A',
+  vAxis: {title: 'SAVI'},
+    hAxis: {title: 'date', format: 'yy-MM', gridlines: {count: 14}},
+  }).setOptions({
+      title: 'SAVI - Area - A',
+      hAxis: {'title': 'Date'},
+      vAxis: {'title': 'Mean SAVI'},
+      lineWidth: 3})
+
+A.style().set({
+    position: 'bottom-left',
+    width: '500px',
+    height: '300px'
+  });
+
+
+var B = ui.Chart.image.series(B_S, P_B, ee.Reducer.mean(), 500) .setChartType('BarChart');
+  B.setOptions({
+    title: 'SAVI - Area B',
+  vAxis: {title: 'SAVI'},
+    hAxis: {title: 'date', format: 'yy-MM', gridlines: {count: 14}},
+  }).setOptions({
+      title: 'SAVI - Area - B',
+      hAxis: {'title': 'Date'},
+      vAxis: {'title': 'Mean SAVI'},
+      lineWidth: 3})
+
+B.style().set({
+    position: 'bottom-center',
+    width: '500px',
+    height: '300px'
+  });
+  
+  
+
+var C = ui.Chart.image.series(C_S, P_C, ee.Reducer.mean(), 500) .setChartType('BarChart');
+  C.setOptions({
+    title: 'SAVI Area - C',
+  vAxis: {title: 'SAVI'},
+    hAxis: {title: 'date', format: 'yy-MM', gridlines: {count: 14}},
+  }).setOptions({
+      title: 'SAVI - Area - C',
+      hAxis: {'title': 'Date'},
+      vAxis: {'title': 'Mean SAVI'},
+      lineWidth: 3})
+
+  C.style().set({
+    position: 'bottom-right',
+    width: '500px',
+    height: '300px'
+  
+  });
+
+
+
+
+
+Map.add(A)
+Map.add(B)
+Map.add(C)
+
+
+  Map.setCenter(75.4524278640747,  30.63372099804389,10);
+  print (A_S)
+  print (B_S)
+  print (C_S)
+  
